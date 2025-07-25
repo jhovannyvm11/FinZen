@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { Card, CardBody } from '@heroui/react';
+import { Transaction } from '@/lib/supabase';
+import { formatCurrency } from '@/utils/currency';
 
 // Icon components for different categories
 const HouseIcon = () => (
@@ -38,47 +40,36 @@ interface CategoryData {
   id: string;
   name: string;
   percentage: string;
+  amount: number;
   color: string;
   icon: React.ReactNode;
 }
 
-const categoryData: CategoryData[] = [
-  {
-    id: 'house',
-    name: 'House',
-    percentage: '41,35%',
-    color: '#9E77ED',
-    icon: <HouseIcon />
-  },
-  {
-    id: 'credit-card',
-    name: 'Credit card',
-    percentage: '21,51%',
-    color: '#F04438',
-    icon: <CreditCardIcon />
-  },
-  {
-    id: 'transportation',
-    name: 'Transportation',
-    percentage: '13,47%',
-    color: '#0BA5EC',
-    icon: <TransportationIcon />
-  },
-  {
-    id: 'groceries',
-    name: 'Groceries',
-    percentage: '9,97%',
-    color: '#17B26A',
-    icon: <GroceriesIcon />
-  },
-  {
-    id: 'shopping',
-    name: 'Shopping',
-    percentage: '3,35%',
-    color: '#4E5BA6',
-    icon: <ShoppingIcon />
-  }
-];
+const categoryColors: { [key: string]: string } = {
+  'Food': '#17B26A',
+  'Entertainment': '#F04438',
+  'Transportation': '#0BA5EC',
+  'Shopping': '#4E5BA6',
+  'Bills': '#9E77ED',
+  'Health': '#F79009',
+  'Education': '#6172F3',
+  'Travel': '#DD2590',
+  'Other': '#667085'
+};
+
+const getCategoryIcon = (category: string) => {
+  const lowerCategory = category.toLowerCase();
+  if (lowerCategory.includes('food') || lowerCategory.includes('grocery')) return <GroceriesIcon />;
+  if (lowerCategory.includes('entertainment')) return <CreditCardIcon />;
+  if (lowerCategory.includes('transport')) return <TransportationIcon />;
+  if (lowerCategory.includes('shopping')) return <ShoppingIcon />;
+  if (lowerCategory.includes('house') || lowerCategory.includes('bill')) return <HouseIcon />;
+  return <ShoppingIcon />; // Default icon
+};
+
+interface ExpensesByCategoryProps {
+  transactions?: Transaction[];
+}
 
 // Simple pie chart component using SVG
 const PieChart = ({ data }: { data: CategoryData[] }) => {
@@ -86,13 +77,21 @@ const PieChart = ({ data }: { data: CategoryData[] }) => {
   const center = size / 2;
   const radius = 100;
   
-  // Convert percentages to angles
-  const total = data.reduce((sum, item) => sum + parseFloat(item.percentage.replace(',', '.').replace('%', '')), 0);
+  if (data.length === 0) {
+    return (
+      <div className="flex justify-center items-center h-60">
+        <span className="text-foreground-500">No expense data available</span>
+      </div>
+    );
+  }
+  
+  // Convert amounts to angles
+  const total = data.reduce((sum, item) => sum + item.amount, 0);
   let currentAngle = 0;
   
   const segments = data.map((item) => {
-    const percentage = parseFloat(item.percentage.replace(',', '.').replace('%', ''));
-    const angle = (percentage / total) * 360;
+    const percentage = (item.amount / total) * 100;
+    const angle = (percentage / 100) * 360;
     const startAngle = currentAngle;
     const endAngle = currentAngle + angle;
     currentAngle += angle;
@@ -143,7 +142,43 @@ const PieChart = ({ data }: { data: CategoryData[] }) => {
   );
 };
 
-const ExpensesByCategory = () => {
+const ExpensesByCategory: React.FC<ExpensesByCategoryProps> = ({ transactions = [] }) => {
+  // Calculate expenses by category from transactions
+  const calculateCategoryData = (): CategoryData[] => {
+    const expenseTransactions = transactions.filter(t => t.type === 'expense');
+    
+    if (expenseTransactions.length === 0) {
+      return [];
+    }
+    
+    // Group by category
+    const categoryTotals: { [key: string]: number } = {};
+    
+    expenseTransactions.forEach(transaction => {
+      const category = transaction.category || 'Other';
+      const amount = Math.abs(Number(transaction.amount));
+      categoryTotals[category] = (categoryTotals[category] || 0) + amount;
+    });
+    
+    // Calculate total expenses
+    const totalExpenses = Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0);
+    
+    // Convert to CategoryData format
+    return Object.entries(categoryTotals)
+      .map(([category, amount]) => ({
+        id: category.toLowerCase().replace(/\s+/g, '-'),
+        name: category,
+        amount,
+        percentage: `${((amount / totalExpenses) * 100).toFixed(1)}%`,
+        color: categoryColors[category] || categoryColors['Other'],
+        icon: getCategoryIcon(category)
+      }))
+      .sort((a, b) => b.amount - a.amount) // Sort by amount descending
+      .slice(0, 5); // Show top 5 categories
+  };
+  
+  const categoryData = calculateCategoryData();
+  
   return (
     <Card className="w-full max-w-sm">
       <CardBody className="p-5 space-y-6">
@@ -159,34 +194,40 @@ const ExpensesByCategory = () => {
         
         {/* Legend */}
         <div className="space-y-0">
-          {categoryData.map((category, index) => (
-            <div 
-              key={category.id} 
-              className={`flex items-center gap-2 py-3 px-2 ${
-                index < categoryData.length - 1 ? 'border-b border-divider' : ''
-              }`}
-            >
-              {/* Icon with colored background */}
-              <div 
-                className="flex items-center justify-center w-8 h-8 rounded-full p-2"
-                style={{ backgroundColor: category.color }}
-              >
-                <div className="text-white w-4 h-4 flex items-center justify-center">
-                  {category.icon}
-                </div>
-              </div>
-              
-              {/* Category name */}
-              <span className="flex-1 text-base font-medium text-foreground">
-                {category.name}
-              </span>
-              
-              {/* Percentage */}
-              <span className="text-base font-medium text-foreground-500">
-                {category.percentage}
-              </span>
+          {categoryData.length === 0 ? (
+            <div className="text-center py-8 text-foreground-500">
+              No expense data available
             </div>
-          ))}
+          ) : (
+            categoryData.map((category, index) => (
+              <div 
+                key={category.id} 
+                className={`flex items-center gap-2 py-3 px-2 ${
+                  index < categoryData.length - 1 ? 'border-b border-divider' : ''
+                }`}
+              >
+                {/* Icon with colored background */}
+                <div 
+                  className="flex items-center justify-center w-8 h-8 rounded-full p-2"
+                  style={{ backgroundColor: category.color }}
+                >
+                  <div className="text-white w-4 h-4 flex items-center justify-center">
+                    {category.icon}
+                  </div>
+                </div>
+                
+                {/* Category name */}
+                <span className="flex-1 text-base font-medium text-foreground">
+                  {category.name}
+                </span>
+                
+                {/* Percentage */}
+                <span className="text-base font-medium text-foreground-500">
+                  {category.percentage}
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </CardBody>
     </Card>

@@ -1,5 +1,8 @@
 import React from 'react';
-import { Card, CardBody } from '@heroui/react';
+import { Card, CardBody, Spinner } from '@heroui/react';
+import { useTransactions } from '@/hooks/useTransactions';
+import { formatCurrency } from '@/utils/currency';
+import { Transaction } from '@/lib/supabase';
 
 // SVG Icons
 const MoreIcon = () => (
@@ -26,60 +29,71 @@ const SpotifyLogo = () => (
   </div>
 );
 
-interface Transaction {
-  id: string;
-  description: string;
-  method: string;
-  date: string;
-  amount: number;
-  logo?: React.ReactNode;
-  initials?: string;
+// Helper function to get initials from description
+const getInitials = (description: string): string => {
+  return description
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase())
+    .slice(0, 2)
+    .join('');
+};
+
+// Helper function to get logo based on description
+const getLogo = (description: string): React.ReactNode | null => {
+  const lowerDesc = description.toLowerCase();
+  if (lowerDesc.includes('netflix')) return <NetflixLogo />;
+  if (lowerDesc.includes('spotify')) return <SpotifyLogo />;
+  return null;
+};
+
+// Helper function to format date
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+};
+
+interface TransactionsHistoryProps {
+  transactions?: Transaction[];
+  loading?: boolean;
+  error?: string | null;
 }
 
-const transactions: Transaction[] = [
-  {
-    id: '1',
-    description: 'Orlando Rodrigues',
-    method: 'Bank account',
-    date: '2024/04/01',
-    amount: 750.00,
-    initials: 'OR'
-  },
-  {
-    id: '2',
-    description: 'Netflix',
-    method: 'Credit card',
-    date: '2024/03/29',
-    amount: -9.90,
-    logo: <NetflixLogo />
-  },
-  {
-    id: '3',
-    description: 'Spotify',
-    method: 'Credit card',
-    date: '2024/03/29',
-    amount: -19.90,
-    logo: <SpotifyLogo />
-  },
-  {
-    id: '4',
-    description: 'Carl Andrew',
-    method: 'Bank account',
-    date: '2024/03/27',
-    amount: 400.00,
-    initials: 'CA'
-  },
-  {
-    id: '5',
-    description: 'Maria Silva',
-    method: 'Bank account',
-    date: '2024/03/25',
-    amount: -150.00,
-    initials: 'MS'
-  }
-];
+const TransactionsHistory: React.FC<TransactionsHistoryProps> = ({ 
+  transactions: propTransactions, 
+  loading: propLoading, 
+  error: propError 
+}) => {
+  const { transactions: hookTransactions, loading: hookLoading, error: hookError } = useTransactions();
+  
+  // Use prop values if provided, otherwise use hook values
+  const transactions = propTransactions ?? hookTransactions;
+  const loading = propLoading ?? hookLoading;
+  const error = propError ?? hookError;
 
-const TransactionsHistory: React.FC = () => {
+  if (loading) {
+    return (
+      <Card className="w-full">
+        <CardBody className="p-6">
+          <div className="flex items-center justify-center h-64">
+            <Spinner size="lg" />
+          </div>
+        </CardBody>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="w-full">
+        <CardBody className="p-6">
+          <div className="text-center text-danger">
+            <p>Error loading transactions: {error}</p>
+          </div>
+        </CardBody>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full">
       <CardBody className="p-6">
@@ -117,61 +131,84 @@ const TransactionsHistory: React.FC = () => {
 
             {/* Table Body */}
             <tbody>
-              {transactions.map((transaction) => (
-                <tr key={transaction.id} className="border-b border-divider last:border-b-0">
-                  {/* Description Column */}
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-3">
-                      {transaction.logo ? (
-                        transaction.logo
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-default-100 border border-divider flex items-center justify-center">
-                          <span className="text-xs font-medium text-foreground-600">
-                            {transaction.initials}
-                          </span>
-                        </div>
-                      )}
-                      <span className="text-sm font-medium text-foreground">
-                        {transaction.description}
-                      </span>
-                    </div>
-                  </td>
-
-                  {/* Method Column */}
-                  <td className="py-4 px-4">
-                    <span className="text-sm text-foreground-500">
-                      {transaction.method}
-                    </span>
-                  </td>
-
-                  {/* Date Column */}
-                  <td className="py-4 px-4">
-                    <span className="text-sm text-foreground-500">
-                      {transaction.date}
-                    </span>
-                  </td>
-
-                  {/* Amount Column */}
-                  <td className="py-4 px-4">
-                    <span 
-                      className={`text-sm font-medium ${
-                        transaction.amount > 0 
-                          ? 'text-success' 
-                          : 'text-foreground'
-                      }`}
-                    >
-                      {transaction.amount > 0 ? '+' : ''}${Math.abs(transaction.amount).toFixed(2)}
-                    </span>
-                  </td>
-
-                  {/* Actions Column */}
-                  <td className="py-4 px-4">
-                    <button className="text-foreground-400 hover:text-foreground-600 transition-colors">
-                      <MoreIcon />
-                    </button>
+              {transactions.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-foreground-500">
+                    No transactions found
                   </td>
                 </tr>
-              ))}
+              ) : (
+                transactions.map((transaction) => {
+                  const logo = getLogo(transaction.description);
+                  const initials = logo ? null : getInitials(transaction.description);
+                  const amount = Number(transaction.amount);
+                  
+                  return (
+                    <tr key={transaction.id} className="border-b border-divider last:border-b-0">
+                      {/* Description Column */}
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          {logo ? (
+                            logo
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-default-100 border border-divider flex items-center justify-center">
+                              <span className="text-xs font-medium text-foreground-600">
+                                {initials}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-foreground">
+                              {transaction.description}
+                            </span>
+                            {transaction.category && (
+                              <span className="text-xs text-foreground-400">
+                                {transaction.category}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Method Column */}
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-foreground-500">
+                          {transaction.method}
+                        </span>
+                      </td>
+
+                      {/* Date Column */}
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-foreground-500">
+                          {formatDate(transaction.date)}
+                        </span>
+                      </td>
+
+                      {/* Amount Column */}
+                      <td className="py-4 px-4">
+                        <span 
+                          className={`text-sm font-medium ${
+                            transaction.type === 'income' 
+                              ? 'text-success' 
+                              : transaction.type === 'expense'
+                              ? 'text-danger'
+                              : 'text-warning'
+                          }`}
+                        >
+                          {transaction.type === 'income' ? '+' : transaction.type === 'expense' ? '-' : ''}{formatCurrency(Math.abs(amount))}
+                        </span>
+                      </td>
+
+                      {/* Actions Column */}
+                      <td className="py-4 px-4">
+                        <button className="text-foreground-400 hover:text-foreground-600 transition-colors">
+                          <MoreIcon />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

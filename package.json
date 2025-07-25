@@ -6,11 +6,18 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "setup-env": "./scripts/setup-env.sh",
+    "dev:staging": "NODE_ENV=staging next dev --turbopack",
+    "build:staging": "NODE_ENV=staging next build",
+    "build:production": "NODE_ENV=production next build",
+    "env:check": "echo \"Environment: $NODE_ENV\" && echo \"Supabase URL: $NEXT_PUBLIC_SUPABASE_URL\"",
+    "env:copy-example": "cp .env.example .env.local"
   },
   "dependencies": {
     "@heroui/react": "^2.8.1",
     "@heroui/theme": "^2.4.19",
+    "@supabase/supabase-js": "^2.52.1",
     "framer-motion": "^12.23.6",
     "next": "15.4.2",
     "react": "19.1.0",
