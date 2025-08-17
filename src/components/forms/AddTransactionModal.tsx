@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   ModalContent,
@@ -12,62 +12,57 @@ import {
   Select,
   SelectItem,
   Textarea,
-  useDisclosure
-} from '@heroui/react';
-import { useTransactions } from '@/hooks/useTransactions';
-import { TransactionInsert } from '@/lib/supabase';
+  useDisclosure,
+} from "@heroui/react";
+import { useTransactions } from "@/hooks/useTransactions";
+import { TransactionInsert } from "@/lib/supabase";
+import { useCategories } from "@/hooks/useCategories";
 
 interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  defaultType?: 'income' | 'expense' | 'transfer';
+  defaultType?: "income" | "expense" | "transfer";
 }
 
 const transactionTypes = [
-  { key: 'income', label: 'Income' },
-  { key: 'expense', label: 'Expense' },
-  { key: 'transfer', label: 'Transfer' }
+  { key: "income", label: "Income" },
+  { key: "expense", label: "Expense" },
+  { key: "transfer", label: "Transfer" },
 ];
 
 const paymentMethods = [
-  { key: 'bank_account', label: 'Bank Account' },
-  { key: 'credit_card', label: 'Credit Card' },
-  { key: 'debit_card', label: 'Debit Card' },
-  { key: 'cash', label: 'Cash' },
-  { key: 'paypal', label: 'PayPal' },
-  { key: 'other', label: 'Other' }
-];
-
-const categories = [
-  { key: 'salary', label: 'Salary' },
-  { key: 'freelance', label: 'Freelance' },
-  { key: 'bonus', label: 'Bonus' },
-  { key: 'food', label: 'Food' },
-  { key: 'transportation', label: 'Transportation' },
-  { key: 'entertainment', label: 'Entertainment' },
-  { key: 'utilities', label: 'Utilities' },
-  { key: 'shopping', label: 'Shopping' },
-  { key: 'healthcare', label: 'Healthcare' },
-  { key: 'education', label: 'Education' },
-  { key: 'transfer', label: 'Transfer' },
-  { key: 'other', label: 'Other' }
+  { key: "bank_account", label: "Bank Account" },
+  { key: "credit_card", label: "Credit Card" },
+  { key: "debit_card", label: "Debit Card" },
+  { key: "cash", label: "Cash" },
+  { key: "paypal", label: "PayPal" },
+  { key: "other", label: "Other" },
 ];
 
 const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   isOpen,
   onClose,
-  defaultType = 'expense'
+  defaultType = "expense",
 }) => {
+  const { categories } = useCategories();
   const { createTransaction } = useTransactions();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<TransactionInsert>({
     type: defaultType,
-    description: '',
+    description: "",
     amount: 0,
-    category: '',
-    method: '',
-    date: new Date().toISOString().split('T')[0]
+    category: "",
+    method: "",
+    date: new Date().toISOString().split("T")[0],
   });
+
+  // Update form data when defaultType changes
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      type: defaultType
+    }));
+  }, [defaultType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,44 +70,48 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
     try {
       // Ensure amount is negative for expenses
-      const amount = formData.type === 'expense' 
-        ? -Math.abs(formData.amount)
-        : Math.abs(formData.amount);
+      const amount =
+        formData.type === "expense"
+          ? -Math.abs(formData.amount)
+          : Math.abs(formData.amount);
 
       await createTransaction({
         ...formData,
-        amount
+        amount,
       });
 
       // Reset form
       setFormData({
         type: defaultType,
-        description: '',
+        description: "",
         amount: 0,
-        category: '',
-        method: '',
-        date: new Date().toISOString().split('T')[0]
+        category: "",
+        method: "",
+        date: new Date().toISOString().split("T")[0],
       });
 
       onClose();
     } catch (error) {
-      console.error('Error creating transaction:', error);
+      console.error("Error creating transaction:", error);
       // Show more detailed error information
       if (error instanceof Error) {
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
       } else {
-        console.error('Unknown error type:', typeof error, error);
+        console.error("Unknown error type:", typeof error, error);
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (field: keyof TransactionInsert, value: string | number) => {
-    setFormData(prev => ({
+  const handleInputChange = (
+    field: keyof TransactionInsert,
+    value: string | number
+  ) => {
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -131,15 +130,16 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 placeholder="Select transaction type"
                 selectedKeys={[formData.type]}
                 onSelectionChange={(keys) => {
-                  const selectedKey = Array.from(keys)[0] as 'income' | 'expense' | 'transfer';
-                  handleInputChange('type', selectedKey);
+                  const selectedKey = Array.from(keys)[0] as
+                    | "income"
+                    | "expense"
+                    | "transfer";
+                  handleInputChange("type", selectedKey);
                 }}
                 isRequired
               >
                 {transactionTypes.map((type) => (
-                  <SelectItem key={type.key}>
-                    {type.label}
-                  </SelectItem>
+                  <SelectItem key={type.key}>{type.label}</SelectItem>
                 ))}
               </Select>
 
@@ -149,7 +149,9 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 label="Amount"
                 placeholder="0.00"
                 value={formData.amount.toString()}
-                onChange={(e) => handleInputChange('amount', parseFloat(e.target.value) || 0)}
+                onChange={(e) =>
+                  handleInputChange("amount", parseFloat(e.target.value) || 0)
+                }
                 startContent={
                   <div className="pointer-events-none flex items-center">
                     <span className="text-default-400 text-small">$</span>
@@ -164,7 +166,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               label="Description"
               placeholder="Enter transaction description"
               value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
+              onChange={(e) => handleInputChange("description", e.target.value)}
               isRequired
             />
 
@@ -176,13 +178,11 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 selectedKeys={formData.category ? [formData.category] : []}
                 onSelectionChange={(keys) => {
                   const selectedKey = Array.from(keys)[0] as string;
-                  handleInputChange('category', selectedKey);
+                  handleInputChange("category", selectedKey);
                 }}
               >
                 {categories.map((category) => (
-                  <SelectItem key={category.key}>
-                    {category.label}
-                  </SelectItem>
+                  <SelectItem key={category.id}>{category.name}</SelectItem>
                 ))}
               </Select>
 
@@ -193,14 +193,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 selectedKeys={formData.method ? [formData.method] : []}
                 onSelectionChange={(keys) => {
                   const selectedKey = Array.from(keys)[0] as string;
-                  handleInputChange('method', selectedKey);
+                  handleInputChange("method", selectedKey);
                 }}
                 isRequired
               >
                 {paymentMethods.map((method) => (
-                  <SelectItem key={method.key}>
-                    {method.label}
-                  </SelectItem>
+                  <SelectItem key={method.key}>{method.label}</SelectItem>
                 ))}
               </Select>
             </div>
@@ -210,7 +208,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               type="date"
               label="Date"
               value={formData.date}
-              onChange={(e) => handleInputChange('date', e.target.value)}
+              onChange={(e) => handleInputChange("date", e.target.value)}
               isRequired
             />
           </ModalBody>
@@ -218,11 +216,15 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <Button color="danger" variant="light" onPress={onClose}>
               Cancel
             </Button>
-            <Button 
-              color="primary" 
-              type="submit" 
+            <Button
+              color="primary"
+              type="submit"
               isLoading={loading}
-              disabled={!formData.description || !formData.method || formData.amount <= 0}
+              disabled={
+                !formData.description ||
+                !formData.method ||
+                formData.amount <= 0
+              }
             >
               Add Transaction
             </Button>
