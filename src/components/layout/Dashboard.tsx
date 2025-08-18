@@ -76,6 +76,11 @@ export default function Dashboard() {
     }
   };
 
+  const refreshData = async () => {
+    await fetchTransactions();
+    getFilteredTransactions();
+  };
+
   const filteredTransactions = getFilteredTransactions();
 
   // Calculate stats based on filtered transactions
@@ -219,10 +224,6 @@ export default function Dashboard() {
     setIsModalOpen(true);
   };
 
-  const handleCreateGoal = () => {
-    console.log("Create goal clicked");
-  };
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header Section */}
@@ -296,6 +297,8 @@ export default function Dashboard() {
           <TransactionsHistory
             transactions={filteredTransactions}
             loading={loading}
+            onDelete={() => refreshData()}
+            onEdit={() => refreshData()}
           />
         </div>
       </div>

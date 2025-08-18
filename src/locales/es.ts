@@ -29,6 +29,8 @@ export const es = {
     // Transacciones
     transactions: {
         addTransaction: "Agregar transacción",
+        editTransaction: "Editar transacción",
+        viewTransaction: "Ver transacción",
         addIncome: "Agregar ingreso",
         addExpense: "Agregar gasto",
         transfer: "Transferir dinero",
@@ -46,6 +48,11 @@ export const es = {
         noTransactions: "No se encontraron transacciones",
         checkLastTransactions: "Revisa tus últimas transacciones",
         method: "Método",
+        options: {
+            edit: "Editar",
+            delete: "Eliminar",
+            viewContent: "Ver contenido"
+        },
 
         // Tipos de transacción
         types: {
@@ -148,6 +155,7 @@ export const es = {
         paymentMethodPlaceholder: "Selecciona el método de pago",
         submit: "Enviar",
         cancel: "Cancelar",
+        close: "Cerrar",
         save: "Guardar",
         delete: "Eliminar",
         edit: "Editar",
@@ -180,6 +188,12 @@ export const es = {
             loading: "Cargando...",
             deleting: "Eliminando...",
             updating: "Actualizando..."
+        },
+        delete: {
+            title: "Confirmar eliminación",
+            message: "¿Estás seguro de eliminar esta transacción?",
+            messageWithItem: "¿Estás seguro de eliminar la transacción {itemName}?",
+            success: "Transacción eliminada exitosamente"
         }
     },
 

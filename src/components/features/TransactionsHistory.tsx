@@ -1,10 +1,20 @@
-import React from "react";
-import { Card, CardBody, Spinner } from "@heroui/react";
+import React, { useState } from "react";
+import {
+  Card,
+  CardBody,
+  Spinner,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  Button,
+} from "@heroui/react";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { formatCurrency } from "@/utils/currency";
 import { Transaction } from "@/lib/supabase";
 import { useCategories } from "@/hooks/useCategories";
+import AddTransactionModal from "../forms/AddTransactionModal";
+import ConfirmDeleteModal from "../ui/ConfirmDeleteModal";
 
 // SVG Icons
 const MoreIcon = () => (
@@ -97,20 +107,88 @@ interface TransactionsHistoryProps {
   transactions?: Transaction[];
   loading?: boolean;
   error?: string | null;
+  onDelete?: () => void;
+  onEdit?: () => void;
 }
 
 const TransactionsHistory: React.FC<TransactionsHistoryProps> = ({
   transactions: propTransactions,
   loading: propLoading,
   error: propError,
+  onDelete,
+  onEdit,
 }) => {
   const { t } = useTranslation();
   const {
     transactions: hookTransactions,
     loading: hookLoading,
     error: hookError,
+    deleteTransaction,
   } = useTransactions();
   const { categories } = useCategories();
+
+  const [modalType, setModalType] = useState<"income" | "expense" | "transfer">(
+    "expense"
+  );
+  const [modalMode, setModalMode] = useState<"create" | "edit" | "view">(
+    "create"
+  );
+  const [isModalTransactionOpen, setIsModalTransactionOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
+
+  // Funciones para manejar las acciones del popover
+  const handleEdit = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setModalMode("edit");
+    setIsModalTransactionOpen(true);
+    setOpenPopoverId(null); // Cerrar popover
+  };
+
+  const handleDelete = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setIsDeleteModalOpen(true);
+    setOpenPopoverId(null); // Cerrar popover
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedTransaction) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteTransaction(selectedTransaction.id);
+      setIsDeleteModalOpen(false);
+      onDelete?.();
+      setSelectedTransaction(null);
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+      // TODO: Show error toast/notification to user
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleViewContent = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setModalType(transaction.type);
+    setModalMode("view");
+    setIsModalTransactionOpen(true);
+    setOpenPopoverId(null); // Cerrar popover
+  };
+
+  const refreshDataDashboard = () => {
+    onEdit?.();
+  };
+
+  const getMessageConfirmDelete = (itemName: string) => {
+    return (
+      t(`messages.delete.message ${itemName}`) ||
+      `Estas seguro de eliminar la transacción ${itemName}?`
+    );
+  };
 
   const getNameCategoryById = (id: string): string => {
     const category = categories?.find((category) => category.id === id);
@@ -269,9 +347,54 @@ const TransactionsHistory: React.FC<TransactionsHistoryProps> = ({
 
                       {/* Actions Column */}
                       <td className="py-4 px-4">
-                        <button className="text-foreground-400 hover:text-foreground-600 transition-colors">
-                          <MoreIcon />
-                        </button>
+                        <Popover
+                          backdrop="opaque"
+                          placement="bottom-end"
+                          isOpen={openPopoverId === transaction.id}
+                          onOpenChange={(open) => {
+                            setOpenPopoverId(open ? transaction.id : null);
+                          }}
+                        >
+                          <PopoverTrigger>
+                            <Button
+                              isIconOnly
+                              variant="light"
+                              size="sm"
+                              className="text-foreground-400 hover:text-foreground-600 transition-colors"
+                            >
+                              <MoreIcon />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="p-1">
+                            <div className="flex flex-col gap-1">
+                              <Button
+                                variant="light"
+                                size="sm"
+                                className="justify-start"
+                                onPress={() => handleEdit(transaction)}
+                              >
+                                {t("transactions.options.edit") || "Editar"}
+                              </Button>
+                              <Button
+                                variant="light"
+                                size="sm"
+                                className="justify-start text-danger"
+                                onPress={() => handleDelete(transaction)}
+                              >
+                                {t("transactions.options.delete") || "Eliminar"}
+                              </Button>
+                              <Button
+                                variant="light"
+                                size="sm"
+                                className="justify-start"
+                                onPress={() => handleViewContent(transaction)}
+                              >
+                                {t("transactions.options.viewContent") ||
+                                  "Ver Contenido"}
+                              </Button>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </td>
                     </tr>
                   );
@@ -280,6 +403,37 @@ const TransactionsHistory: React.FC<TransactionsHistoryProps> = ({
             </tbody>
           </table>
         </div>
+
+        {/* Unified Transaction Modal */}
+        <AddTransactionModal
+          isOpen={isModalTransactionOpen}
+          onClose={(edit) => {
+            setIsModalTransactionOpen(false);
+            setSelectedTransaction(null);
+            if (edit) {
+              refreshDataDashboard();
+            }
+          }}
+          defaultType={modalType}
+          mode={modalMode}
+          transaction={selectedTransaction}
+        />
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmDeleteModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setSelectedTransaction(null);
+          }}
+          onConfirm={handleConfirmDelete}
+          title={t("messages.delete.title") || "Delete Transaction"}
+          message={getMessageConfirmDelete(
+            selectedTransaction?.description || ""
+          )}
+          itemName={selectedTransaction?.description || ""}
+          isLoading={isDeleting}
+        />
       </CardBody>
     </Card>
   );
