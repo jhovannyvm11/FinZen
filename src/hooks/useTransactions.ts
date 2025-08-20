@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase, Transaction, TransactionInsert } from '@/lib/supabase';
 
 export const useTransactions = () => {
@@ -7,7 +7,7 @@ export const useTransactions = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Obtener todas las transacciones
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -22,10 +22,10 @@ export const useTransactions = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Obtener las últimas transacciones (limitadas)
-  const fetchRecentTransactions = async (limit: number = 10) => {
+  const fetchRecentTransactions = useCallback(async (limit: number = 10) => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -41,10 +41,10 @@ export const useTransactions = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Crear nueva transacción
-  const createTransaction = async (transaction: TransactionInsert) => {
+  const createTransaction = useCallback(async (transaction: TransactionInsert) => {
     try {
       const { data, error } = await supabase
         .from('transactions')
@@ -53,7 +53,7 @@ export const useTransactions = () => {
         .single();
 
       if (error) throw error;
-      
+
       // Actualizar la lista local
       setTransactions(prev => [data, ...prev]);
       return data;
@@ -61,10 +61,10 @@ export const useTransactions = () => {
       setError(err instanceof Error ? err.message : 'Error creating transaction');
       throw err;
     }
-  };
+  }, []);
 
   // Actualizar transacción
-  const updateTransaction = async (id: string, updates: Partial<TransactionInsert>) => {
+  const updateTransaction = useCallback(async (id: string, updates: Partial<TransactionInsert>) => {
     try {
       const { data, error } = await supabase
         .from('transactions')
@@ -74,9 +74,9 @@ export const useTransactions = () => {
         .single();
 
       if (error) throw error;
-      
+
       // Actualizar la lista local
-      setTransactions(prev => 
+      setTransactions(prev =>
         prev.map(t => t.id === id ? data : t)
       );
       return data;
@@ -84,10 +84,10 @@ export const useTransactions = () => {
       setError(err instanceof Error ? err.message : 'Error updating transaction');
       throw err;
     }
-  };
+  }, []);
 
   // Eliminar transacción
-  const deleteTransaction = async (id: string) => {
+  const deleteTransaction = useCallback(async (id: string) => {
     try {
       const { error } = await supabase
         .from('transactions')
@@ -95,33 +95,29 @@ export const useTransactions = () => {
         .eq('id', id);
 
       if (error) throw error;
-      
+
       // Actualizar la lista local
       setTransactions(prev => prev.filter(t => t.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error deleting transaction');
       throw err;
     }
-  };
+  }, []);
 
   // Obtener estadísticas
-  const getStats = () => {
+  const getStats = useCallback(() => {
     const income = transactions
       .filter(t => t.type === 'income')
       .reduce((sum, t) => sum + Number(t.amount), 0);
-    
+
     const expenses = transactions
       .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
-    
-    const balance = income - expenses;
-    
-    return { income, expenses, balance };
-  };
 
-  useEffect(() => {
-    fetchRecentTransactions();
-  }, []);
+    const balance = income - expenses;
+
+    return { income, expenses, balance };
+  }, [transactions]);
 
   return {
     transactions,

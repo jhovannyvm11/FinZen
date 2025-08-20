@@ -54,6 +54,12 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
 
   // Función para obtener texto anidado usando dot notation
   const t = (key: string): string => {
+    // Handle undefined, null, or empty keys
+    if (!key || typeof key !== 'string') {
+      console.warn(`Invalid translation key: ${key}`);
+      return String(key || '');
+    }
+    
     const keys = key.split(".");
     let result: unknown = messages;
 

@@ -15,6 +15,7 @@ import { Transaction } from "@/lib/supabase";
 import { useCategories } from "@/hooks/useCategories";
 import AddTransactionModal from "../forms/AddTransactionModal";
 import ConfirmDeleteModal from "../ui/ConfirmDeleteModal";
+import { getTranslationWithInterpolation } from "@/utils/i18n";
 
 // SVG Icons
 const MoreIcon = () => (
@@ -185,8 +186,12 @@ const TransactionsHistory: React.FC<TransactionsHistoryProps> = ({
 
   const getMessageConfirmDelete = (itemName: string) => {
     return (
-      t(`messages.delete.message ${itemName}`) ||
-      `Estas seguro de eliminar la transacción ${itemName}?`
+      getTranslationWithInterpolation(
+        t,
+        "messages.delete.messageWithItem",
+        { itemName },
+        `Estas seguro de eliminar la transacción ${itemName}?`
+      ) || `Estas seguro de eliminar la transacción ${itemName}?`
     );
   };
 

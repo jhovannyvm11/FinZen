@@ -48,6 +48,18 @@ export const es = {
         noTransactions: "No se encontraron transacciones",
         checkLastTransactions: "Revisa tus últimas transacciones",
         method: "Método",
+
+        table: {
+            date: "Fecha",
+            description: "Descripción",
+            type: "Tipo",
+            category: "Categoría",
+            amount: "Monto",
+            method: "Método",
+            status: "Estado",
+            actions: "Acciones",
+            noTransactionsFound: "No se encontraron transacciones"
+        },
         options: {
             edit: "Editar",
             delete: "Eliminar",
@@ -240,6 +252,38 @@ export const es = {
         filter: "Filtrar",
         reset: "Restablecer",
         submit: "Enviar"
+    },
+
+    // Filtros de transacciones
+    filters: {
+        title: "Filtros",
+        titleTransactions: "Filtros de transacciones",
+        clearFilters: "Limpiar filtros",
+        searchTransactions: "Buscar transacciones...",
+        selectType: "Seleccionar tipo",
+        selectStatus: "Seleccionar estado",
+        selectCategory: "Seleccionar categoría",
+        dateFrom: "Fecha desde",
+        dateTo: "Fecha hasta",
+        minAmount: "Monto mínimo",
+        maxAmount: "Monto máximo",
+        allCategories: "Todas las categorías"
+    },
+
+    // Estados de transacciones
+    status: {
+        pending: "Pendiente",
+        completed: "Completada",
+        cancelled: "Cancelada"
+    },
+
+    // Valores generales
+    general: {
+        all: "Todos",
+        income: "Ingreso",
+        expense: "Gasto",
+        transfer: "Transferencia",
+        currencySymbol: "$"
     },
 
     // Acciones comunes

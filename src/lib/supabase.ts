@@ -31,6 +31,7 @@ export interface Transaction {
   category?: string;
   method: string;
   date: string;
+  status: 'pending' | 'completed' | 'cancelled';
   created_at: string;
   updated_at: string;
 }
@@ -42,4 +43,5 @@ export interface TransactionInsert {
   category?: string;
   method: string;
   date: string;
+  status?: 'pending' | 'completed' | 'cancelled';
 }

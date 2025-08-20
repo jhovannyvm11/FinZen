@@ -5,8 +5,12 @@ export interface Transaction {
   type: 'income' | 'expense' | 'transfer';
   amount: number;
   description: string;
-  category: string;
+  category?: string;
+  method: string;
   date: string;
+  status: 'pending' | 'completed' | 'cancelled';
+  created_at: string;
+  updated_at: string;
   account?: string;
 }
 
@@ -36,3 +40,38 @@ export interface ExpenseCategory {
 export type Theme = 'light' | 'dark';
 
 export type Period = 'this-week' | 'this-month' | 'this-year' | 'last-month' | 'last-year';
+
+export interface TransactionFilters {
+  dateFrom?: string;
+  dateTo?: string;
+  type?: 'income' | 'expense' | 'transfer' | 'all';
+  status?: 'pending' | 'completed' | 'cancelled' | 'all';
+  category?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  search?: string;
+}
+
+export interface PaginationOptions {
+  page: number;
+  limit: number;
+  total: number;
+}
+
+export interface TransactionStats {
+  totalIncome: number;
+  totalExpenses: number;
+  balance: number;
+  transactionCount: number;
+  averageTransaction: number;
+  pendingTransactions: number;
+}
+
+export interface ExportOptions {
+  format: 'csv' | 'excel';
+  includeFilters: boolean;
+  dateRange?: {
+    from: string;
+    to: string;
+  };
+}
